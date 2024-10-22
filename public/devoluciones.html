@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devoluciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .boton {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px; /* Espacio entre los botones */
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .boton:hover {
+        background-color: #0056b3;
+    }
+    </style>
+</head>
+<body>
+    <h1>Registro de Devoluciones</h1>
+    <form id="form-devolucion">
+        <input type="number" id="id-factura" placeholder="ID de la Factura" required />
+        
+        <div class="form-producto">
+            <label for="producto">Producto:</label>
+            <select id="producto" required>
+                <option value="" disabled selected>Seleccione un producto</option>
+                <!-- Las opciones de productos se llenarán aquí -->
+            </select>
+
+            <label for="cantidad-devuelta">Cantidad Devuelta:</label>
+            <input type="number" id="cantidad-devuelta" placeholder="Cantidad Devuelta" required />
+        </div>
+        
+        <label for="tipo-dano">Razón de Devolución:</label>
+        <select id="tipo-dano" required>
+            <option value="" disabled selected>Seleccione una razón</option>
+            <option value="VENCIMIENTO">VENCIMIENTO</option>
+            <option value="DAÑO">DAÑO</option>
+        </select>
+        
+        <label for="fecha-dano">Fecha de Daño:</label>
+        <input type="date" id="fecha-dano" required />
+
+        <button type="submit" class="boton">Registrar Devolución</button>
+
+        <button type="button" class="boton" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
+
+    </form>
+
+    <h1>Lista de Devoluciones</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Devolución</th>
+                <th>ID Factura</th>
+                <th>ID Producto</th>
+                <th>Descripción del Producto</th>
+                <th>Cantidad Devuelta</th>
+                <th>Razón de Devolución</th>
+                <th>Fecha de Devolución</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-devoluciones">
+            <!-- Aquí se llenarán las devoluciones -->
+        </tbody>
+    </table>
+
+    <script>
+        async function cargarProductos() {
+            const response = await fetch('/productos');
+            const productos = await response.json();
+            const select = document.getElementById('producto');
+
+            productos.forEach(producto => {
+                let option = document.createElement('option');
+                option.value = producto.ID_PRODUCTO;
+                option.text = `${producto.DESCRIPCION} - $${producto.PRECIO_VENTA}`;
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('form-devolucion').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Evitar que el formulario se envíe de forma tradicional
+
+            const idFactura = document.getElementById('id-factura').value;
+            const idProducto = document.getElementById('producto').value; // Obtener ID_PRODUCTO
+            const cantidadDevuelta = document.getElementById('cantidad-devuelta').value;
+            const tipoDano = document.getElementById('tipo-dano').value; // Obtener tipo de daño
+            const fechaDano = document.getElementById('fecha-dano').value; // Obtener fecha de daño
+
+            try {
+                const response = await fetch('/devolucion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        idFactura,
+                        idProducto,
+                        cantidadDevuelta,
+                        razon: tipoDano, // Enviar razón de devolución al servidor
+                        descripcionProducto: 'Descripción del Producto', // Este valor debe obtenerse del producto seleccionado
+                        fechaDano // Enviar fecha de daño al servidor
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Devolución registrada exitosamente.');
+                    obtenerDevoluciones(); // Refrescar la tabla de devoluciones
+                    document.getElementById('form-devolucion').reset(); // Limpiar el formulario
+                } else {
+                    alert('Error al registrar la devolución.');
+                }
+            } catch (error) {
+                console.error('Error al registrar la devolución:', error);
+            }
+        });
+
+        async function obtenerDevoluciones() {
+            try {
+                const response = await fetch('/devoluciones'); // Endpoint para obtener devoluciones
+                const devoluciones = await response.json();
+
+                const tbody = document.getElementById('tabla-devoluciones');
+                tbody.innerHTML = ''; // Limpiar tabla antes de llenarla
+
+                devoluciones.forEach(devolucion => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${devolucion.ID_DEVOLUCION}</td>
+                        <td>${devolucion.ID_FACTURA}</td>
+                        <td>${devolucion.ID_PRODUCTO}</td>
+                        <td>${devolucion.DESCRIPCION_PRODUCTO}</td>
+                        <td>${devolucion.CANTIDAD_DEVUELTA}</td>
+                        <td>${devolucion.RAZON}</td>
+                        <td>${new Date(devolucion.FECHA_DEVOLUCION).toLocaleDateString()}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Error al obtener devoluciones:', error);
+            }
+        }
+
+        window.onload = () => {
+            cargarProductos(); // Cargar productos al iniciar
+            obtenerDevoluciones(); // Cargar devoluciones al cargar la página
+        };
+    </script>
+</body>
+</html>

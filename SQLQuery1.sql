@@ -1,0 +1,2 @@
+USE RINCONGT;
+SELECT * FROM sys.tables;

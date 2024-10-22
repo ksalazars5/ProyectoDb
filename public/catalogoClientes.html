@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css"> <!-- Agrega tu archivo CSS aquí -->
+    <script src="/script.js" defer></script> <!-- Tu archivo JS para la lógica -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            color: white;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Estilo adicional para alinear el buscador y los botones */
+        .buscador {
+            margin-bottom: 20px;
+        }
+
+        .buscador label,
+        .buscador input,
+        .buscador button {
+            margin-right: 10px;
+        }
+
+        /* Alinear los botones en línea */
+        .botones-adicionales {
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .navbar {
+            display: flex;
+            background-color: #333;
+            padding: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        #total {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+        input {
+            margin-bottom: 5px; 
+        }
+        label {
+            margin-bottom: 5px; 
+            display: block;
+        }
+
+        .form-actions {
+            margin-top: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Catálogo de Clientes</h1>
+    
+    <h2>Agregar Cliente</h2>
+    <form id="clienteForm" action="/agregar-cliente" method="POST">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" name="nombre" required><br>
+    
+        <label for="telefono">Teléfono:</label>
+        <input type="text" id="telefono" name="telefono" required><br>
+    
+        <label for="direccion">Dirección:</label>
+        <input type="text" id="direccion" name="direccion" required><br>
+    
+        <label for="nit">NIT:</label>
+        <input type="text" id="nit" name="nit"><br>
+    
+        <input type="submit" value="Agregar Cliente">
+        
+        <!-- Botón de volver -->
+        <button id="volver" style="margin-left: 20px; padding: 10px 20px;">Volver</button>
+       
+    </form>    
+
+    <h2>Clientes Existentes</h2>
+    
+    <!-- Barra de búsqueda -->
+    <input type="text" id="search" placeholder="Buscar cliente..." style="margin-bottom: 20px; padding: 5px;">
+
+    <table id="clientesTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>NIT</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Aquí se llenará la tabla con los clientes existentes -->
+        </tbody>
+    </table>
+
+    <script>
+        // Manejo de envío del formulario para agregar un cliente
+        document.getElementById('clienteForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevenir el comportamiento por defecto del formulario
+
+            const cliente = {
+                nombre: document.getElementById('nombre').value,
+                telefono: document.getElementById('telefono').value,
+                direccion: document.getElementById('direccion').value,
+                nit: document.getElementById('nit').value || null // Si NIT está vacío, enviar null
+            };
+
+            fetch('/agregar-cliente', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(cliente)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Cliente agregado con éxito');
+                    this.reset(); // Limpiar el formulario
+                    cargarClientes(); // Recargar la lista de clientes
+                } else {
+                    alert('Error al agregar cliente: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al agregar cliente');
+            });
+        });
+
+        // Función para cargar los clientes existentes
+        function cargarClientes() {
+            fetch('/clientes') // Asegúrate que la ruta sea correcta
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('clientesTable').querySelector('tbody');
+                    tableBody.innerHTML = ''; // Limpiar la tabla
+                    data.forEach(cliente => {
+                        const row = `<tr>
+                            <td>${cliente.ID_CLIENTE}</td>
+                            <td>${cliente.NOMBRE}</td>
+                            <td>${cliente.TELEFONO}</td>
+                            <td>${cliente.DIRECCION}</td>
+                            <td>${cliente.NIT}</td>
+                        </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => console.error('Error al cargar clientes:', error));
+        }
+
+        // Cargar los clientes al cargar la página
+        document.addEventListener('DOMContentLoaded', cargarClientes);
+
+        // Manejo del botón de volver
+        document.getElementById('volver').addEventListener('click', function() {
+            window.history.back(); // Regresar a la página anterior
+        });
+
+        // Funcionalidad de búsqueda
+        document.getElementById('search').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#clientesTable tbody tr');
+            rows.forEach(row => {
+                const nombre = row.cells[1].textContent.toLowerCase(); // Suponiendo que el nombre está en la segunda celda
+                row.style.display = nombre.includes(filter) ? '' : 'none'; // Mostrar u ocultar la fila
+            });
+        });
+    </script>
+</body>
+</html>

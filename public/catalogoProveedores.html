@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/script.js" defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            color: white;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .buscador {
+            margin-bottom: 20px;
+        }
+
+        .buscador label, .buscador input {
+            margin-right: 10px;
+        }
+
+        .navbar {
+            display: flex;
+            background-color: #333;
+            padding: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+         input {
+            margin-bottom: 5px; 
+        }
+        label {
+            margin-bottom: 5px; 
+            display: block;
+        }
+
+        .form-actions {
+            margin-top: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Catálogo de Proveedores</h1>
+    
+    <h2>Agregar Proveedor</h2>
+    <form id="proveedorForm">
+        <label for="descripcion">Descripción:</label>
+        <input type="text" id="descripcion" name="descripcion" required>
+
+        <br>
+
+        <label for="telefono">Teléfono:</label>
+        <input type="text" id="telefono" name="telefono">
+
+        <br>
+
+        <label for="direccion">Dirección:</label>
+        <input type="text" id="direccion" name="direccion">
+        
+        <br>
+    
+        <div class="form-actions">
+            <button type="submit">Agregar Proveedor</button>
+            <button id="volver" type="button">Volver</button>
+        </div>
+    </form>
+
+    <h2>Buscar Proveedor</h2>
+    <div class="search-container">
+        <label for="search">Buscar por descripción:</label>
+        <input type="text" id="search" placeholder="Buscar proveedor...">
+    </div>
+
+    <h2>Proveedores Existentes</h2>
+    <table id="proveedoresTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Descripción</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Aquí se llenará la tabla con los proveedores existentes -->
+        </tbody>
+    </table>
+
+    <script>
+        // Manejo de envío del formulario para agregar un proveedor
+        document.getElementById('proveedorForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const data = {
+                descripcion: document.getElementById('descripcion').value,
+                telefono: document.getElementById('telefono').value,
+                direccion: document.getElementById('direccion').value
+            };
+
+            fetch('/agregarProveedor', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Proveedor agregado con éxito');
+                    this.reset();  // Limpiar el formulario
+                    cargarProveedores();  // Recargar la lista de proveedores
+                } else {
+                    alert('Error al agregar proveedor: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al agregar proveedor');
+            });
+        });
+
+        // Función para cargar los proveedores existentes desde el servidor
+        function cargarProveedores() {
+            fetch('/proveedores')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('proveedoresTable').querySelector('tbody');
+                    tableBody.innerHTML = '';  // Limpiar la tabla antes de agregar los datos
+                    data.forEach(proveedor => {
+                        const row = `<tr>
+                            <td>${proveedor.ID_PROVEEDOR}</td>
+                            <td>${proveedor.DESCRIPCION}</td>
+                            <td>${proveedor.TELEFONO}</td>
+                            <td>${proveedor.DIRECCION}</td>
+                        </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                })
+                .catch(error => console.error('Error al cargar proveedores:', error));
+        }
+
+        // Cargar los proveedores al cargar la página
+        document.addEventListener('DOMContentLoaded', cargarProveedores);
+
+        // Función para buscar proveedores por descripción
+        document.getElementById('search').addEventListener('input', function() {
+            const searchValue = this.value.toLowerCase();  // Obtener el valor de búsqueda y convertirlo a minúsculas
+            const rows = document.querySelectorAll('#proveedoresTable tbody tr');  // Obtener todas las filas de la tabla
+
+            rows.forEach(row => {
+                const descripcion = row.cells[1].textContent.toLowerCase();  // Obtener la descripción de la fila y convertirla a minúsculas
+                if (descripcion.includes(searchValue)) {
+                    row.style.display = '';  // Mostrar la fila si coincide con la búsqueda
+                } else {
+                    row.style.display = 'none';  // Ocultar la fila si no coincide
+                }
+            });
+        });
+
+        // Manejo del botón de volver
+        document.getElementById('volver').addEventListener('click', function() {
+            window.history.back();
+        });
+    </script>
+</body>
+</html>

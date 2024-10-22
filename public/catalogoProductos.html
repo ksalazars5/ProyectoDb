@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/styles.css"> <!-- Agrega tu archivo CSS aquí -->
+    <script src="/script.js" defer></script> <!-- Tu archivo JS para la lógica -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            color: white;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Estilo adicional para alinear el buscador y los botones */
+        .buscador {
+            margin-bottom: 20px;
+        }
+
+        .buscador label,
+        .buscador input,
+        .buscador button {
+            margin-right: 10px;
+        }
+
+        /* Alinear los botones en línea */
+        .botones-adicionales {
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .navbar {
+            display: flex;
+            background-color: #333;
+            padding: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        #total {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+        input {
+            margin-bottom: 5px; 
+        }
+        label {
+            margin-bottom: 5px; 
+            display: block;
+        }
+
+        .form-actions {
+            margin-top: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Catálogo de Productos</h1>
+    
+    <h2>Agregar Producto</h2>
+    <form id="productoForm">
+        <!-- Menú desplegable para la categoría -->
+        <label for="id_categoria">Categoría:</label>
+        <select id="id_categoria" name="id_categoria" required>
+            <option value="1">Pastas (Fideos, Corbatitas, etc.)</option>
+            <option value="2">Productos Cárnicos (Pollo y Carne de Cerdo)</option>
+            <option value="3">Embutidos (Jamones, Longanizas, etc.)</option>
+            <option value="4">Lácteos (Crema, queso, etc.)</option>
+            <option value="5">Golosinas (Dulces, chocolates, etc.)</option>
+            <option value="6">Aguas Gaseosas</option>
+            <option value="7">Carbonatados (Gatorade, Revive, etc.)</option>
+        </select>
+        <br>
+
+        <label for="descripcion">Descripción:</label>
+        <input type="text" id="descripcion" name="descripcion" required>
+        <br>
+        
+        <label for="costo">Costo:</label>
+        <input type="number" id="costo" name="costo" step="0.01" required>
+        <br>
+
+        <label for="precioVenta">Precio de Venta:</label>
+        <input type="number" id="precioVenta" name="precioVenta" step="0.01" required>
+        <br>
+
+        <label for="inventario">Inventario:</label>
+        <input type="number" id="inventario" name="inventario" required min="0" value="0">        
+
+        <div class="form-actions">
+            <button type="submit">Agregar Producto</button>
+            <button id="volver" type="button">Volver</button>
+        </div>
+    </form>
+
+    <h2>Buscar Producto</h2>
+    <div class="search-container">
+        <label for="search">Buscar por descripción:</label>
+    </div>
+
+    <h2>Productos Existentes</h2>
+        <!-- Barra de búsqueda -->
+        <input type="text" id="searchProducto" placeholder="Buscar Producto..." style="margin-bottom: 20px; padding: 5px;">
+
+    <table id="productosTable">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>ID Categoría</th>
+                <th>Descripción</th>
+                <th>Costo</th>
+                <th>Precio de Venta</th>
+                <th>Inventario</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Aquí se llenará la tabla con los productos existentes -->
+        </tbody>
+    </table>
+
+    <script>
+        let productos = [];
+    
+        // Función para obtener y cargar los productos en el menú desplegable
+        function cargarProductos() {
+    fetch('/productos')
+        .then(response => response.json())
+        .then(data => {
+            const tableBody = document.getElementById('productosTable').querySelector('tbody');
+            tableBody.innerHTML = '';  // Limpiar la tabla antes de agregar los datos
+            data.forEach(producto => {
+                const row = `<tr>
+                    <td>${producto.ID_PRODUCTO}</td>
+                    <td>${producto.ID_CATEGORIA}</td> <!-- ID de la categoría -->
+                    <td>${producto.DESCRIPCION}</td>
+                    <td>${producto.COSTO.toFixed(2)}</td> <!-- Formatear a 2 decimales -->
+                    <td>${producto.PRECIO_VENTA.toFixed(2)}</td> <!-- Formatear a 2 decimales -->
+                    <td>${producto.INVENTARIO}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        })
+        .catch(error => console.error('Error al cargar productos:', error));
+}
+
+        // Manejo de envío del formulario para agregar un producto
+        document.getElementById('productoForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+    
+            // Crear un objeto con los datos del formulario para el fetch
+            const data = {
+                id_categoria: document.getElementById('id_categoria').value,
+                descripcion: document.getElementById('descripcion').value,
+                costo: parseFloat(document.getElementById('costo').value), // Asegurarse de que sea un número
+                precioVenta: parseFloat(document.getElementById('precioVenta').value), // Asegurarse de que sea un número
+                inventario: parseInt(document.getElementById('inventario').value) // Asegurarse de que sea un entero
+            };
+    
+            fetch('/agregarProducto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'  // Enviar los datos como JSON
+                },
+                body: JSON.stringify(data)  // Convertir el objeto en cadena JSON
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Producto agregado con éxito');
+                    this.reset();
+                    cargarProductos(); // Recargar la lista de productos
+                } else {
+                    alert('Error al agregar producto');
+                }
+            });
+        });
+    
+        // Función para obtener el nombre de la categoría basada en el ID
+        function obtenerNombreCategoria(idCategoria) {
+            switch(idCategoria) {
+                case 1: return 'Pastas (Fideos, Corbatitas, etc.)';
+                case 2: return 'Productos Cárnicos (Pollo y Carne de Cerdo)';
+                case 3: return 'Embutidos (Jamones, Longanizas, etc.)';
+                case 4: return 'Lácteos (Crema, queso, etc.)';
+                case 5: return 'Golosinas (Dulces, chocolates, etc.)';
+                case 6: return 'Aguas Gaseosas';
+                case 7: return 'Carbonatados (Gatorade, Revive, etc.)';
+                default: return 'Desconocido';
+            }
+        }
+            // Filtrar productos por búsqueda
+        document.getElementById('searchProducto').addEventListener('input', function() {
+            const searchValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#productosTable tbody tr'); // Cambia a la tabla de productos
+            rows.forEach(row => {
+                const descripcion = row.cells[2].textContent.toLowerCase(); // Cambia al índice correcto de la descripción
+                if (descripcion.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    
+        // Cargar los productos al cargar la página
+        document.addEventListener('DOMContentLoaded', cargarProductos);
+    
+        // Manejo del botón de volver
+        document.getElementById('volver').addEventListener('click', function() {
+            window.history.back(); // Regresar a la página anterior
+        });
+    </script>    
+</body>
+</html>

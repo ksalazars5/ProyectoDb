@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura</title>
+    <style>
+
+    body {
+                font-family: 'Arial', sans-serif;
+                background-color: #f4f4f9;
+                margin: 0;
+                padding: 0;
+                color: #333;
+            }
+
+            h1, h2, h3 {
+                text-align: center;
+                color: #333;
+                margin-bottom: 20px;
+            }
+
+            .container {
+                max-width: 900px;
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #fff;
+                box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            }
+
+            /* Buscador del cliente */
+            .buscador {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+                gap: 10px;
+            }
+
+            .buscador label {
+                flex-basis: 100%;
+                margin-bottom: 5px;
+                font-weight: bold;
+            }
+
+            .buscador input[type="text"] {
+                flex-grow: 2;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                font-size: 16px;
+            }
+
+            .buscador button {
+                padding: 10px 15px;
+                background-color: #007bff;
+                color: #fff;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+
+            .buscador button:hover {
+                background-color: #0056b3;
+            }
+
+            .buscador input[type="date"] {
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                font-size: 16px;
+                flex-grow: 1;
+            }
+
+            /* Modal */
+            .modal {
+                display: none; 
+                position: fixed; 
+                z-index: 1; 
+                left: 0;
+                top: 0;
+                width: 100%; 
+                height: 100%; 
+                overflow: auto; 
+                background-color: rgba(0,0,0,0.4); 
+                padding-top: 60px;
+            }
+
+            .modal-content {
+                background-color: #fefefe;
+                margin: 5% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                border-radius: 10px;
+                width: 80%; 
+                max-width: 600px;
+            }
+
+            /* Formulario del cliente */
+            #form-cliente {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                margin-bottom: 20px;
+                padding: 20px;
+                background-color: #f9f9f9;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            }
+
+            #form-cliente input {
+                padding: 10px;
+                font-size: 16px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+
+            #form-cliente input[readonly] {
+                background-color: #e9ecef;
+            }
+
+            /* Tabla de productos */
+            table {
+                width: 100%;
+                margin-top: 20px;
+                border-collapse: collapse;
+                background-color: #fff;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            th, td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+
+            th {
+                background-color: #007bff;
+                color: white;
+            }
+
+            td {
+                background-color: #f8f9fa;
+            }
+
+            tr:hover {
+                background-color: #f1f1f1;
+            }
+
+            /* Total */
+            #total-compra {
+                font-weight: bold;
+                font-size: 1.8em;
+                text-align: right;
+                margin-top: 20px;
+                color: #333;
+            }
+
+            /* Botones */
+            button {
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+                margin-top: 15px;
+            }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+            /* Mejoras en el formulario de producto */
+            .form-producto {
+                display: flex;
+                gap: 15px;
+                flex-wrap: wrap;
+            }
+
+            .form-producto label, .form-producto select, .form-producto input {
+                flex-grow: 1;
+                min-width: 150px;
+            }
+            .hidden {
+                display: none;
+            }
+        </style>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/script.js" defer></script>
+</head>
+<body>
+    <h1>Factura</h1>
+    <div class="container">
+        <!-- Buscador del Cliente -->
+        <div class="buscador">
+            <label for="buscar-cliente">Buscar Cliente (NIT):</label>
+            <input type="text" id="buscar-cliente" oninput="buscarSugerenciasClientes()" placeholder="Buscar NIT...">
+            <button type="button" onclick="buscarCliente()">Buscar</button>
+            <button type="button" onclick="window.location.href='http://localhost:3000/catalogoClientes.html'">Agregar Cliente</button>
+            <button type="button" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
+            <div id="sugerencias-clientes" class="sugerencias hidden"></div>
+            <input type="date" id="fechaFactura" class="form-control" style="width: auto; flex: 0 0 auto;" />
+        </div>
+
+        <!-- Formulario del cliente -->
+        <h2>Datos del Cliente</h2>
+        <div id="resultado-busqueda" style="display: none;">
+            <form id="form-cliente">
+                <input type="text" id="cliente-id" placeholder="ID del cliente" readonly />
+                <input type="text" id="nombre" placeholder="Nombre del cliente" />
+                <input type="text" id="telefono" placeholder="Teléfono del cliente" />
+                <input type="text" id="direccion" placeholder="Dirección del cliente" />
+                <input type="text" id="nit" placeholder="NIT del cliente" />
+                <p class="hidden" id="cliente-info"></p>
+             </form>
+        </div>
+
+        <!-- Sección de selección de productos -->
+        <h2>Seleccione un Producto</h2>
+        <div class="form-producto">
+            <label for="producto">Producto:</label>
+            <select id="producto" required>
+                <option value="" disabled selected>Seleccione un producto</option>
+                <!-- Las opciones de productos se llenarán aquí -->
+            </select>
+
+            <label for="cantidad">Cantidad:</label>
+            <input type="number" id="cantidad" value="1" min="1">
+
+            <button onclick="agregarProducto()">Agregar al Carrito</button>
+        </div>
+
+        <!-- Tabla de productos en el carrito -->
+        <h2>Productos en el Carrito</h2>
+        <table id="tabla-productos">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Subtotal</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyCarrito">
+                <!-- Aquí se llenarán los productos -->
+            </tbody>
+        </table>
+
+        <h3>Total a Pagar: $<span id="total-compra">0.00</span></h3>
+        <button id="checkout" onclick="verDatos()">Finalizar Compra</button>
+        <button id="btnTomarPago" onclick="abrirModal()">Tomar Pago</button>
+        <button id="nuevaFacturaBtn" onclick="ingresarNuevaFactura()">Ingresar Nueva Factura</button>
+    </div>
+    <script>
+        let carrito = [];
+        let productos = [];
+        let cliente = null;
+    
+        // Función para obtener y cargar los productos en el menú desplegable
+        async function cargarProductos() {
+        const response = await fetch('/productos');
+        productos = await response.json();
+        const select = document.getElementById('producto');
+
+        productos.forEach(producto => {
+    let option = document.createElement('option');
+    option.value = producto.ID_PRODUCTO;
+    option.text = `${producto.DESCRIPCION} - $${producto.PRECIO_VENTA}`;
+    select.appendChild(option);
+});
+        }  
+        function agregarProducto() {
+            const productoId = parseInt(document.getElementById('producto').value);
+            const cantidad = parseInt(document.getElementById('cantidad').value);
+            const producto = productos.find(p => p.ID_PRODUCTO === productoId);
+    
+            if (producto) {
+                const subtotal = producto.PRECIO_VENTA * cantidad;
+                carrito.push({ ...producto, cantidad, subtotal });
+                actualizarTabla();
+                calcularTotal();
+            }
+        }   
+
+        function actualizarTabla() {
+    const tbody = document.getElementById('tabla-productos').getElementsByTagName('tbody')[0];
+    tbody.innerHTML = ''; // Limpiar el contenido actual de la tabla   
+    carrito.forEach((item, index) => {
+        const row = tbody.insertRow();       
+        // Insertar la nueva columna con el ID del producto
+        row.insertCell(0).innerText = item.ID_PRODUCTO;
+        // Mantener las otras columnas (descripción, cantidad, precio, subtotal, botón eliminar)
+        row.insertCell(1).innerText = item.DESCRIPCION;
+        row.insertCell(2).innerText = item.cantidad;
+        row.insertCell(3).innerText = item.PRECIO_VENTA.toFixed(2);
+        row.insertCell(4).innerText = item.subtotal.toFixed(2);
+        row.insertCell(5).innerHTML = `<button onclick="eliminarProducto(${index})">Eliminar</button>`;
+    });
+}  
+        function eliminarProducto(index) {
+            carrito.splice(index, 1);
+            actualizarTabla();
+            calcularTotal();
+        }
+    
+        function calcularTotal() {
+            const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+            document.getElementById('total-compra').innerText = total.toFixed(2);
+        }   
+        async function guardarCliente() {
+            const nombre = document.getElementById('nombre').value;
+            const telefono = document.getElementById('telefono').value;
+            const direccion = document.getElementById('direccion').value;
+            const nit = document.getElementById('nit').value;   
+            cliente = { nombre, telefono, direccion, nit };   
+            try {
+                const response = await fetch('/clientes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(cliente),
+                });   
+                if (!response.ok) {
+                    throw new Error('Error al guardar el cliente');
+                }
+                alert('Cliente guardado exitosamente');
+                document.getElementById('form-cliente').reset();
+                document.getElementById('guardar-cliente-btn').style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('No se pudo guardar el cliente');
+            }
+        }
+                    // Función para buscar sugerencias de NITs
+                    async function buscarSugerenciasClientes() {
+                const nitInput = document.getElementById('buscar-cliente').value;
+                const sugerenciasDiv = document.getElementById('sugerencias-clientes');
+    
+                // Limpiar el área de sugerencias antes de comenzar
+                sugerenciasDiv.innerHTML = '';
+    
+                if (nitInput.length === 0) {
+                    sugerenciasDiv.style.display = 'none';
+                    return;
+                }
+    
+                try {
+                    const response = await fetch(`/buscar-sugerencias-clientes?nit=${nitInput}`);
+                    if (!response.ok) {
+                        throw new Error('Error al obtener sugerencias');
+                    }
+                    // Aquí almacenamos la respuesta como sugerencias
+                    const sugerencias = await response.json(); 
+                    console.log(sugerencias); // Verifica que se están obteniendo datos correctamente
+    
+                    // Verificar si hay sugerencias
+                    if (!Array.isArray(sugerencias) || sugerencias.length === 0) {
+                        sugerenciasDiv.style.display = 'none';
+                        return;
+                    }
+                    // Si hay sugerencias, muestra las sugerencias
+                    mostrarSugerencias(sugerencias, sugerenciasDiv);
+                    sugerenciasDiv.style.display = 'block'; // Muestra las sugerencias
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }  
+            function mostrarSugerencias(sugerencias, sugerenciasDiv) {
+                sugerencias.forEach(cliente => {
+                    const item = document.createElement('div');
+                    item.classList.add('sugerencia-item');
+                    item.textContent = cliente.NIT; // Mostrar el NIT (puedes añadir más datos si es necesario)
+                    item.onclick = () => seleccionarSugerencia(cliente.NIT); // Define qué pasa al hacer clic en una sugerencia
+                    sugerenciasDiv.appendChild(item);
+                });
+            }    
+            function seleccionarSugerencia(nit) {
+                console.log('NIT seleccionado:', nit);
+                document.getElementById('buscar-cliente').value = nit;
+                document.getElementById('sugerencias-clientes').style.display = 'none';
+            } 
+            // Función que ejecuta una acción al seleccionar una sugerencia
+            function seleccionarSugerencia(nit) {
+                console.log('NIT seleccionado:', nit);
+                document.getElementById('buscar-cliente').value = nit;
+                document.getElementById('sugerencias-clientes').style.display = 'none';
+            }    
+            function buscarCliente() {
+            const nit = document.getElementById('buscar-cliente').value;
+            console.log('Buscando cliente con NIT:', nit);
+
+            if (!nit) {
+                alert('Por favor, ingrese un NIT');
+                return;
+            }
+            // Realiza la petición al servidor usando fetch
+            fetch(`/clientes/nit/${nit}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json(); // Solo devolver el JSON si la respuesta es exitosa
+                    } else {
+                        throw new Error('Cliente no encontrado'); // Lanzar error si la respuesta no es 200
+                    }
+                })
+                .then(data => {
+                    // Rellenar los campos del formulario con los datos del cliente
+                    document.getElementById('cliente-id').value = data.ID_CLIENTE;
+                    document.getElementById('nombre').value = data.NOMBRE;
+                    document.getElementById('telefono').value = data.TELEFONO;
+                    document.getElementById('direccion').value = data.DIRECCION;
+                    document.getElementById('nit').value = data.NIT;
+                    
+                    // Mostrar la sección de resultados
+                    document.getElementById('resultado-busqueda').style.display = 'block';
+                    document.getElementById('cliente-info').innerText = `Cliente ID: ${data.ID_CLIENTE}, Nombre: ${data.NOMBRE}, Teléfono: ${data.TELEFONO}, Dirección: ${data.DIRECCION}, NIT: ${data.NIT}`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message); // Muestra el mensaje de error aquí
+                });
+        }
+       // Cargar productos al cargar la página
+        cargarProductos();
+let numeroFacturaNueva = 0; // Cambiar a let para poder reasignar
+// Función para finalizar la compra
+function finalizarCompra() {
+    return new Promise((resolve, reject) => {
+        const idCliente = document.getElementById('cliente-id').value;
+        const totalFactura = parseFloat(document.getElementById('total-compra').innerText);
+        const fecha = document.getElementById('fechaFactura').value;
+        // Asegúrate de que se hayan ingresado todos los campos requeridos
+        if (!idCliente || !totalFactura || !fecha) {
+            alert('Por favor, completa todos los campos requeridos.');
+            return reject('Campos incompletos'); // Rechaza la promesa
+        }
+        // Envía la solicitud POST al backend
+        fetch('/agregar-factura', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ idCliente, totalFactura, fecha })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                //alert('Factura agregada con éxito. Número de factura: ' + data.idFactura);
+                numeroFacturaNueva = data.idFactura; // Asigna el número de factura a la variable global
+                //alert(numeroFacturaNueva); // Muestra el número de factura
+                resolve(); // Resuelve la promesa
+            } else {
+                alert('Error: ' + data.message);
+                reject(data.message); // Rechaza la promesa en caso de error
+            }
+        })
+        .catch(error => {
+            console.error('Error al enviar la factura:', error);
+            alert('Error en el servidor');
+            reject(error); // Rechaza la promesa en caso de error en fetch
+        });
+    });
+}
+// Ver los datos
+async function verDatos() {
+    await finalizarCompra();  
+    // Extraer los productos desde la tabla del carrito
+    const productos = [];
+    const rows = document.querySelectorAll('#tbodyCarrito tr');
+
+    // Llamar a finalizarCompra y esperar que se complete
+    // Ahora puedes usar numeroFacturaNueva aquí
+    const idFactura = numeroFacturaNueva; 
+    rows.forEach(row => {
+        const idProducto = row.cells[0].innerText; // ID del producto (columna 1)
+        const cantidad = parseInt(row.cells[2].innerText); // Cantidad (columna 3)
+        const precioUnitario = parseFloat(row.cells[3].innerText); // Precio Unitario (columna 4)
+        const subtotal = parseFloat(row.cells[4].innerText); // Subtotal (columna 5)
+
+        productos.push({ idProducto, cantidad, subtotal, precioUnitario });
+    });
+    try {
+        const detallesPromises = productos.map(producto => {
+            const { idProducto, cantidad, subtotal, precioUnitario } = producto;
+            return fetch('/agregar-detalle-factura', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ idFactura, idProducto, cantidad, subtotal, precioUnitario })
+            });
+        });
+
+        // Espera a que todas las inserciones se completen
+        await Promise.all(detallesPromises);
+        alert('Detalles de factura agregados con éxito.');
+    } catch (error) {
+        console.error('Error al agregar detalles de la factura:', error);
+        alert('Error al agregar detalles de la factura.');
+    }
+}
+//PAGOS
+// Abre el modal
+function abrirModal() {
+    document.getElementById('modalPago').style.display = 'block';
+}
+// Cierra el modal
+function cerrarModal() {
+    document.getElementById('modalPago').style.display = 'none';
+}
+// Muestra u oculta los campos de tarjeta según el método de pago seleccionado
+function toggleTarjetaFields() {
+    const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
+    const camposTarjeta = document.getElementById('camposTarjeta');
+    if (metodoPago === 'tarjeta') {
+        camposTarjeta.style.display = 'block';
+    } else {
+        camposTarjeta.style.display = 'none';
+    }
+}
+// Procesa el pago
+// Abre el modal
+function abrirModal() {
+    document.getElementById('modalPago').style.display = 'block';
+}
+
+// Cierra el modal
+function cerrarModal() {
+    document.getElementById('modalPago').style.display = 'none';
+}
+
+// Muestra u oculta los campos de tarjeta según el método de pago seleccionado
+function toggleTarjetaFields() {
+    const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
+    const camposTarjeta = document.getElementById('camposTarjeta');
+    if (metodoPago === 'tarjeta') {
+        camposTarjeta.style.display = 'block';
+    } else {
+        camposTarjeta.style.display = 'none';
+    }
+}
+
+// Procesa el pago
+async function procesarPago() {
+    const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
+    const monto = parseFloat(document.getElementById('montoPago').value);
+
+    // Validar el monto
+    if (isNaN(monto) || monto <= 0) {
+        alert('Ingrese un monto válido.');
+        return;
+    }
+
+    // Datos a enviar
+    let data = {
+        metodoPago: metodoPago,
+        total: monto,
+        fechaCobro: new Date().toISOString().slice(0, 10) // Fecha actual en formato YYYY-MM-DD
+    };
+
+    // Validar información de tarjeta
+    if (metodoPago === 'tarjeta') {
+        const numeroTarjeta = document.getElementById('numeroTarjeta').value;
+        const fechaExpiracion = document.getElementById('fechaExpiracion').value;
+        const codigoSeguridad = document.getElementById('codigoSeguridad').value;
+
+        // Validar número de tarjeta
+        if (!numeroTarjeta || numeroTarjeta.length < 16) {
+            alert('Ingrese un número de tarjeta válido.');
+            return;
+        }
+
+        // Validar fecha de expiración
+        const [mes, año] = fechaExpiracion.split('/').map(Number);
+        const fechaActual = new Date();
+        const fechaValida = new Date(2000 + año, mes - 1); // mes - 1 porque los meses en JavaScript comienzan en 0
+
+        if (!fechaValida || fechaValida < fechaActual) {
+            alert('La fecha de expiración es inválida.');
+            return;
+        }
+        // Agregar datos de tarjeta a la solicitud
+        data.numeroTarjeta = numeroTarjeta;
+        data.fechaExpiracion = fechaValida.toISOString().slice(0, 10); // Formato YYYY-MM-DD
+        data.codigoSeguridad = codigoSeguridad;
+    }
+
+    // Enviar datos al servidor con fetch
+    try {
+        const response = await fetch('/procesarPago', { // Ajusta la URL a la ruta de tu servidor
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert('Pago procesado correctamente');
+            // Cerrar el modal
+            cerrarModal();
+        } else {
+            alert('Error al procesar el pago: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error en la conexión: ' + error.message);
+    }
+}
+
+
+
+function ingresarNuevaFactura() {
+    // Limpia el carrito
+    carrito = [];
+    actualizarTabla();
+    calcularTotal();
+    
+    // Limpia los campos del cliente
+    document.getElementById('cliente-id').value = '';
+    document.getElementById('nombre').value = '';
+    document.getElementById('telefono').value = '';
+    document.getElementById('direccion').value = '';
+    document.getElementById('nit').value = '';
+    document.getElementById('total-compra').innerText = '0.00';
+    document.getElementById('fechaFactura').value = '';
+
+    // Muestra el botón de guardar cliente si está oculto
+    document.getElementById('guardar-cliente-btn').style.display = 'block';
+
+    alert('Puedes ingresar una nueva factura.');
+}
+    </script>
+    <!-- Modal -->
+    <div id="modalPago" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModal()">&times;</span>
+        <h2>Recepción de Pago</h2>
+        <form id="formPago">
+            <label>
+                <input type="radio" name="metodoPago" value="efectivo" checked onclick="toggleTarjetaFields()"> Efectivo
+            </label>
+            <label>
+                <input type="radio" name="metodoPago" value="tarjeta" onclick="toggleTarjetaFields()"> Tarjeta
+            </label>
+            <div id="camposTarjeta" style="display:none;">
+                <label>Número de Tarjeta:</label>
+                <input type="text" id="numeroTarjeta" placeholder="XXXX-XXXX-XXXX-XXXX">
+                <label>Fecha de Expiración:</label>
+                <input type="text" id="fechaExpiracion" placeholder="MM/AA">
+                <label>Código de Seguridad:</label>
+                <input type="text" id="codigoSeguridad" placeholder="XXX">
+            </div>
+            <label>Monto:</label>
+            <input type="number" id="montoPago" placeholder="Ingrese monto" required>
+            <button type="button" onclick="procesarPago()">Procesar Pago</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
