@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Reportes</title>
+    <style>
+        /* Estilos globales */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f6f8;
+            color: #343a40;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilos del formulario */
+        form {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin: 15px 0 5px;
+            font-size: 1.1em;
+        }
+
+        select, input[type="date"], button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0 15px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input[type="date"]:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+        /* Estilos de botones */
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        button[type="button"] {
+            background-color: #6c757d;
+        }
+
+        button[type="button"]:hover {
+            background-color: #5a6268;
+        }
+
+        /* Resultados del reporte */
+        #reporteResultado {
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #dee2e6;
+            text-align: left;
+            padding: 12px;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #e2e6ea;
+        }
+    </style>
+</head>
+<body>
+    <h1>Consulta de Reportes</h1>
+    <form id="reporteForm">
+        <label for="tipoReporte">Tipo de Reporte:</label>
+        <select id="tipoReporte">
+            <option value="cierreDia">Selecciona una opcion</option>
+            <option value="devoluciones">Devoluciones</option>
+            <option value="clientes">Clientes</option>
+            <option value="facturas">Facturas</option>
+        </select>
+
+        <label for="fechaInicio">Fecha Inicio:</label>
+        <input type="date" id="fechaInicio">
+
+        <label for="fechaFin">Fecha Fin:</label>
+        <input type="date" id="fechaFin">
+
+        <button type="submit">Generar Reporte</button>
+        <button type="button" id="resetButton">Limpiar</button>
+
+        <button type="button" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
+
+    </form>
+
+    <div id="reporteResultado"></div>
+
+    <script>
+        document.getElementById('reporteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const tipoReporte = document.getElementById('tipoReporte').value;
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+
+            let url;
+            switch (tipoReporte) {
+                case 'cierreDia':
+                    url = '/reporteCierreDia';
+                    break;
+                case 'devoluciones':
+                    url = '/reporteDevoluciones';
+                    break;
+                case 'clientes':
+                    url = '/reporteClientes';
+                    break;
+                case 'facturas':
+                    url = '/reporteFacturas';
+                    break;
+                default:
+                    alert('Tipo de reporte no válido');
+                    return;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ fechaInicio, fechaFin })
+            });
+
+            const data = await response.json();
+            if (data.success !== false) {
+                mostrarResultados(data.resultado, tipoReporte);
+            } else {
+                alert('Error al obtener los datos del reporte');
+            }
+        });
+
+        function mostrarResultados(resultados, tipo) {
+            let html = '<table><thead><tr>';
+            if (tipo === 'cierreDia') {
+                html += '<th>ID Producto</th><th>Descripción</th><th>Total Vendido</th><th>Total Ingresos</th>';
+            } else if (tipo === 'devoluciones') {
+                html += '<th>ID Devolucion</th><th>ID Factura</th><th>Total Devoluciones</th><th>Razon</th><th>Producto</th><th>Fecha</th>';
+            } else if (tipo === 'clientes') {
+                html += '<th>ID Cliente</th><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>NIT</th><th>Fecha</th>';
+            } else if (tipo === 'facturas') {
+                html += '<th>ID Factura</th><th>Cliente</th><th>Total Factura</th><th>Fecha</th>';
+            }
+            html += '</tr></thead><tbody>';
+
+            resultados.forEach(item => {
+                html += '<tr>';
+                for (const key in item) {
+                    html += `<td>${item[key]}</td>`;
+                }
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('reporteResultado').innerHTML = html;
+        }
+
+        document.getElementById('resetButton').addEventListener('click', () => {
+            document.getElementById('reporteForm').reset();
+            document.getElementById('reporteResultado').innerHTML = '';
+        });
+    </script>
+</body>
+</html>

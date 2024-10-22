@@ -48,7 +48,9 @@ app.post('/login', async (req, res) => {
     }
 });
 // Función para agregar un nuevo cliente utilizando el SP
-async function agregarCliente(nombre, telefono, direccion, nit) {
+async function agregarCliente(nombre, telefono, direccion, nit, fechaRegistro) {
+    const query = 'INSERT INTO CLIENTE (NOMBRE, TELEFONO, DIRECCION, NIT, FECHA_REGISTRO) VALUES (?, ?, ?, ?, ?)';
+    const values = [nombre, telefono, direccion, nit, fechaRegistro];
     try {
         const pool = await sql.connect(config);
         const result = await pool.request()
@@ -56,6 +58,7 @@ async function agregarCliente(nombre, telefono, direccion, nit) {
             .input('TELEFONO', sql.VarChar, telefono)
             .input('DIRECCION', sql.VarChar, direccion)
             .input('NIT', sql.VarChar, nit ? nit : null)  // Si NIT es opcional
+            .input('FECHA_REGISTRO', sql.Date, fechaRegistro)  // Agregar fecha de registro como parámetro
             .execute('spAgregarCliente');  // Ejecutar el SP
             
         return result;  // Devolver el resultado
@@ -66,13 +69,14 @@ async function agregarCliente(nombre, telefono, direccion, nit) {
 }
 
 // Ruta para agregar cliente
+// Ruta para agregar cliente
 app.post('/agregar-cliente', async (req, res) => {
-    const { nombre, telefono, direccion, nit } = req.body;  // Ya no req.body directamente, sino el objeto JSON
-    console.log('Datos recibidos:', { nombre, telefono, direccion, nit });
+    const { nombre, telefono, direccion, nit, fechaRegistro } = req.body; // Extraer fechaRegistro
+    console.log('Datos recibidos:', { nombre, telefono, direccion, nit, fechaRegistro });
 
     try {
-        await agregarCliente(nombre, telefono, direccion, nit);
-        res.status(201).json({ success: true, message: 'Cliente agregado con éxito' });  // Responder en formato JSON
+        await agregarCliente(nombre, telefono, direccion, nit, fechaRegistro); // Asegúrate de que tu función agregarCliente esté definida para recibir la fecha
+        res.status(201).json({ success: true, message: 'Cliente agregado con éxito' }); // Responder en formato JSON
     } catch (error) {
         console.error('Error al agregar el cliente:', error);
         res.status(500).json({ success: false, message: 'Error al agregar el cliente: ' + error.message });
@@ -121,7 +125,6 @@ app.get('/clientes/nit/:nit', async (req, res) => {
 });
 
 // Rutas para obtener productos
-// Rutas para obtener productos
 app.get('/productos', async (req, res) => {
     try {
         let pool = await sql.connect(config);
@@ -158,8 +161,6 @@ app.post('/agregarProducto', async (req, res) => {
         }
     }
 });
-
-
 
 // Rutas para agregar y obtener proveedores utilizando el SP
 app.post('/agregarProveedor', async (req, res) => {
@@ -254,21 +255,14 @@ app.get('/buscar-sugerencias-clientes', async (req, res) => {
 });
 
     
-
-
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 
-
 // FACTRA
 // Función para agregar una nueva factura
-// Función para agregar factura y devolver el ID_FACTURA generado
-// Función para agregar una nueva factura
-
-
 async function agregarDetalleFactura(idFactura, idProducto, cantidad, subtotal, precioUnitario) {
     try {
         let pool = await sql.connect(config);
@@ -278,8 +272,7 @@ async function agregarDetalleFactura(idFactura, idProducto, cantidad, subtotal, 
             .input('CANTIDAD', sql.Int, cantidad)
             .input('SUBTOTAL', sql.Decimal(10, 2), subtotal)
             .input('PRECIO_UNITARIO', sql.Decimal(10, 2), precioUnitario)
-            .query('INSERT INTO DETALLE_FACTURA (ID_FACTURA, ID_PRODUCTO, CANTIDAD, SUBTOTAL, PRECIO_UNITARIO) VALUES (@ID_FACTURA, @ID_PRODUCTO, @CANTIDAD, @SUBTOTAL, @PRECIO_UNITARIO)');
-        
+            .query('INSERT INTO DETALLE_FACTURA2 (ID_FACTURA, ID_PRODUCTO, CANTIDAD, SUBTOTAL, PRECIO_UNITARIO) VALUES (@ID_FACTURA, @ID_PRODUCTO, @CANTIDAD, @SUBTOTAL, @PRECIO_UNITARIO)');
         console.log(`Detalle agregado correctamente: Factura ID ${idFactura}, Producto ID ${idProducto}`);
     } catch (error) {
         console.error('Error al agregar detalle de factura:', error);
@@ -290,7 +283,6 @@ async function agregarDetalleFactura(idFactura, idProducto, cantidad, subtotal, 
 app.post('/agregar-detalle-factura', async (req, res) => {
     const { idFactura, idProducto, cantidad, subtotal, precioUnitario } = req.body;
     console.log('Datos recibidos para detalle de factura:', { idFactura, idProducto, cantidad, subtotal, precioUnitario });
-
     try {
         await agregarDetalleFactura(idFactura, idProducto, cantidad, subtotal, precioUnitario);
         res.status(201).json({ success: true, message: 'Detalle de factura agregado con éxito' });
@@ -411,14 +403,226 @@ app.get('/devoluciones', async (req, res) => {
     }
 });
 
+// Endpoint para obtener el reporte de cierre del día
+app.post('/reporteCierreDia', async (req, res) => {
+    const { fechaInicio, fechaFin } = req.body; 
+    let pool;
+    try {
+        pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('fechaInicio', sql.Date, fechaInicio)
+            .input('fechaFin', sql.Date, fechaFin)
+            .query(`SELECT 
+                        p.ID_PRODUCTO,
+                        p.DESCRIPCION,
+                        SUM(v.CANTIDAD_VENDIDA) AS Total_Vendido,
+                        SUM(v.TOTAL_VENDIDO) AS Total_Ingresos  
+                    FROM 
+                        VENTA v
+                    JOIN 
+                        PRODUCTO p ON v.ID_PRODUCTO = p.ID_PRODUCTO
+                    WHERE 
+                        CAST(v.FECHA AS DATE) BETWEEN @fechaInicio AND @fechaFin
+                    GROUP BY 
+                        p.ID_PRODUCTO, p.DESCRIPCION;`);
+        
+        res.json({ tipo: 'cierreDia', resultado: result.recordset });
+    } catch (err) {
+        console.error('Error al obtener reporte de cierre del día:', err);
+        res.status(500).json({ success: false, message: 'Error al obtener reporte de cierre del día' });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+// Otros endpoints de reportes son similares y no requieren cambios significativos
+// Endpoint para obtener el reporte de devoluciones
+app.post('/reporteDevoluciones', async (req, res) => {
+    const { fechaInicio, fechaFin } = req.body;
+    let pool;
+    try {
+        pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('fechaInicio', sql.Date, fechaInicio)
+            .input('fechaFin', sql.Date, fechaFin)
+            .query(`SELECT 
+                        d.ID_DEVOLUCION,
+                        f.ID_FACTURA,
+                        d.CANTIDAD_DEVUELTA,
+                        d.RAZON,
+                        d.DESCRIPCION_PRODUCTO,
+                        CAST(d.FECHA_DEVOLUCION AS DATE) AS Fecha
+                    FROM 
+                        DEVOLUCION d
+                    JOIN 
+                        FACTURA f ON d.ID_FACTURA = f.ID_FACTURA
+                    WHERE 
+                        CAST(d.FECHA_DEVOLUCION AS DATE) BETWEEN @fechaInicio AND @fechaFin;`);
+        
+        res.json({ tipo: 'devoluciones', resultado: result.recordset });
+    } catch (err) {
+        console.error('Error al obtener reporte de devoluciones:', err);
+        res.status(500).json({ success: false, message: 'Error al obtener reporte de devoluciones' });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+// Endpoint para obtener el reporte de clientes
+app.post('/reporteClientes', async (req, res) => {
+    const { fechaInicio, fechaFin } = req.body;
+    let pool;
+    try {
+        pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('fechaInicio', sql.Date, fechaInicio)
+            .input('fechaFin', sql.Date, fechaFin)
+            .query(`SELECT 
+                        c.ID_CLIENTE,
+                        c.NOMBRE,
+                        c.TELEFONO,
+                        c.DIRECCION,
+                        CAST(c.FECHA_REGISTRO AS DATE) AS FechaRegistro
+                    FROM 
+                        CLIENTE c
+                    WHERE 
+                        CAST(c.FECHA_REGISTRO AS DATE) BETWEEN @fechaInicio AND @fechaFin;`);
+        
+        res.json({ tipo: 'clientes', resultado: result.recordset });
+    } catch (err) {
+        console.error('Error al obtener reporte de clientes:', err);
+        res.status(500).json({ success: false, message: 'Error al obtener reporte de clientes' });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+
+// Endpoint para obtener el reporte de facturas
+app.post('/reporteFacturas', async (req, res) => {
+    const { fechaInicio, fechaFin } = req.body;
+    let pool;
+    try {
+        pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('fechaInicio', sql.Date, fechaInicio)
+            .input('fechaFin', sql.Date, fechaFin)
+            .query(`SELECT 
+                        f.ID_FACTURA,
+                        c.NOMBRE AS Cliente,
+                        f.TOTAL_FACTURA,
+                        CAST(f.FECHA AS DATE) AS Fecha
+                    FROM 
+                        FACTURA f
+                    JOIN 
+                        CLIENTE c ON f.ID_CLIENTE = c.ID_CLIENTE
+                    WHERE 
+                        CAST(f.FECHA AS DATE) BETWEEN @fechaInicio AND @fechaFin;`);
+        
+        res.json({ tipo: 'facturas', resultado: result.recordset });
+    } catch (err) {
+        console.error('Error al obtener reporte de facturas:', err);
+        res.status(500).json({ success: false, message: 'Error al obtener reporte de facturas' });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
 
 
 
 
 
+// Ruta para obtener facturas
+app.get('/api/facturas', async (req, res) => {
+    try {
+        let pool = await sql.connect(config); // Conexión a la base de datos
+        const result = await pool.request().query('SELECT * FROM FACTURA'); // Ajusta el nombre de la tabla según tu esquema
+        res.json(result.recordset); // Devuelve las facturas en formato JSON
+        await pool.close(); // Cierra la conexión al finalizar
+    } catch (err) {
+        console.error('Error al obtener facturas:', err.message);
+        res.status(500).send('Error al obtener facturas'); // Respuesta en caso de error
+    }
+});
 
 
+// Ruta para obtener detalles de una factura específica
+app.get('/api/factura/:id', async (req, res) => {
+    const idFactura = req.params.id; // Obtén el ID de la factura de los parámetros de la ruta
 
+    try {
+        let pool = await sql.connect(config);
+        
+        // Consulta para obtener la factura
+        const facturaQuery = await pool.request()
+            .input('ID_FACTURA', sql.Int, idFactura)
+            .query('SELECT * FROM FACTURA WHERE ID_FACTURA = @ID_FACTURA');
+        
+        const factura = facturaQuery.recordset[0]; // Obtiene la primera factura
 
+        // Consulta para obtener los detalles de la factura
+        const detallesQuery = await pool.request()
+            .input('ID_FACTURA', sql.Int, idFactura)
+            .query('SELECT * FROM DETALLE_FACTURA2 WHERE ID_FACTURA = @ID_FACTURA');
+        
+        const detalles = detallesQuery.recordset; // Obtiene todos los detalles
+        
+        // Combina la factura con sus detalles
+        const resultado = {
+            factura: factura,
+            detalles: detalles
+        };
+        
+        res.json(resultado); // Devuelve el resultado en formato JSON
+        await pool.close(); // Cierra la conexión al finalizar
+    } catch (err) {
+        console.error('Error al obtener detalles de la factura:', err.message);
+        res.status(500).send('Error al obtener detalles de la factura'); // Respuesta en caso de error
+    }
+});
 
+app.get('/api/facturas', async (req, res) => {
+    const sql = 'SELECT * FROM FACTURA'; // Ajusta la consulta según tu base de datos
+
+    try {
+        let pool = await sql.connect(config);
+        const result = await pool.request().query(sql);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener las facturas:', error);
+        res.status(500).send('Error al obtener las facturas');
+    }
+});
+app.get('/api/factura/:idFactura', async (req, res) => {
+    const idFactura = req.params.idFactura;
+    const sql = 'SELECT * FROM DETALLES_FACTURA2 WHERE ID_FACTURA = @ID_FACTURA'; // Ajusta la consulta según tu base de datos
+
+    try {
+        let pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('ID_FACTURA', sql.Int, idFactura)
+            .query(sql);
+
+        // Asumiendo que también tienes información de la factura
+        const factura = await pool.request()
+            .input('ID_FACTURA', sql.Int, idFactura)
+            .query('SELECT * FROM FACTURA WHERE ID_FACTURA = @ID_FACTURA'); // Consulta para la factura
+
+        res.json({
+            factura: factura.recordset[0], // Devolver la factura
+            detalles: result.recordset // Devolver los detalles
+        });
+    } catch (error) {
+        console.error('Error al obtener detalles de la factura:', error);
+        res.status(500).send('Error al obtener detalles de la factura');
+    }
+});
 

@@ -12,12 +12,10 @@
             padding: 20px;
             color: #333;
         }
-
         h1 {
             text-align: center;
             color: #333;
         }
-
         form {
             max-width: 600px;
             margin: 20px auto;
@@ -26,7 +24,6 @@
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
         input, textarea, select {
             width: 100%;
             padding: 10px;
@@ -34,7 +31,6 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-
         button {
             background-color: #007bff;
             color: white;
@@ -43,12 +39,16 @@
             cursor: pointer;
             border-radius: 4px;
             width: 100%;
+            margin: 10px 0; /* Espaciado entre botones */
+            font-size: 16px; /* Tamaño de fuente para botones */
         }
-
         button:hover {
             background-color: #0056b3;
         }
-
+        .button-container {
+            display: flex; /* Usar flexbox para los botones */
+            justify-content: space-between; /* Espaciado entre los botones */
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -56,47 +56,48 @@
             background-color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-
         th, td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-
         th {
             background-color: #007bff;
             color: white;
         }
-
         tr:hover {
             background-color: #f1f1f1;
         }
-        .boton {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px; /* Espacio entre los botones */
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .boton:hover {
-        background-color: #0056b3;
-    }
     </style>
 </head>
 <body>
+    <div class="form-factura">
+        <label for="id-factura">Factura:</label>
+        <select id="id-factura" required>
+            <option value="" disabled selected>Seleccione una factura</option>
+        </select>
+    </div>
+    <table id="detalles-factura">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unitario</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Los detalles se agregarán aquí dinámicamente -->
+        </tbody>
+    </table>
+    
     <h1>Registro de Devoluciones</h1>
     <form id="form-devolucion">
-        <input type="number" id="id-factura" placeholder="ID de la Factura" required />
-        
+
         <div class="form-producto">
             <label for="producto">Producto:</label>
             <select id="producto" required>
                 <option value="" disabled selected>Seleccione un producto</option>
-                <!-- Las opciones de productos se llenarán aquí -->
             </select>
 
             <label for="cantidad-devuelta">Cantidad Devuelta:</label>
@@ -113,10 +114,10 @@
         <label for="fecha-dano">Fecha de Daño:</label>
         <input type="date" id="fecha-dano" required />
 
-        <button type="submit" class="boton">Registrar Devolución</button>
-
-        <button type="button" class="boton" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
-
+        <div class="button-container">
+            <button type="submit" class="boton">Registrar Devolución</button>
+            <button type="button" class="boton" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
+        </div>
     </form>
 
     <h1>Lista de Devoluciones</h1>
@@ -138,27 +139,95 @@
     </table>
 
     <script>
-        async function cargarProductos() {
-            const response = await fetch('/productos');
-            const productos = await response.json();
-            const select = document.getElementById('producto');
+        async function cargarFacturas() {
+            try {
+                const response = await fetch('/api/facturas');
+                if (!response.ok) {
+                    throw new Error('Error al cargar las facturas');
+                }
+                const facturas = await response.json();
+                const select = document.getElementById('id-factura');
 
-            productos.forEach(producto => {
-                let option = document.createElement('option');
-                option.value = producto.ID_PRODUCTO;
-                option.text = `${producto.DESCRIPCION} - $${producto.PRECIO_VENTA}`;
-                select.appendChild(option);
+                // Llena el select con las opciones de facturas
+                facturas.forEach(factura => {
+                    let option = document.createElement('option');
+                    option.value = factura.ID_FACTURA;
+                    option.text = `Factura #${factura.ID_FACTURA}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error al cargar facturas:', error);
+            }
+        }
+
+        async function cargarDetallesFactura(idFactura) {
+    try {
+        const response = await fetch(`/api/factura/${idFactura}`);
+        if (!response.ok) {
+            throw new Error('Error al cargar los detalles de la factura');
+        }
+        const { factura, detalles } = await response.json();
+
+        // Aquí puedes verificar si los detalles están vacíos
+        if (!detalles.length) {
+            alert('No hay detalles disponibles para esta factura.');
+            return;
+        }
+
+        mostrarDetalles(detalles);
+    } catch (error) {
+        console.error('Error al cargar detalles de la factura:', error);
+        alert(error.message); // Muestra el error al usuario
+    }
+}
+
+        function mostrarDetalles(detalles) {
+            const detallesContainer = document.getElementById('detalles-factura').querySelector('tbody');
+            detallesContainer.innerHTML = ''; // Limpiar contenido anterior
+
+            // Crear filas para cada detalle
+            detalles.forEach(detalle => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${detalle.ID_PRODUCTO}</td>
+                    <td>${detalle.CANTIDAD}</td>
+                    <td>${detalle.PRECIO_UNITARIO}</td>
+                    <td>${detalle.SUBTOTAL}</td>
+                `;
+                detallesContainer.appendChild(row);
             });
         }
 
-        document.getElementById('form-devolucion').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evitar que el formulario se envíe de forma tradicional
+        // Agrega un event listener al select de facturas
+        document.getElementById('id-factura').addEventListener('change', function() {
+            const idFacturaSeleccionada = this.value;
+            if (idFacturaSeleccionada) {
+                cargarDetallesFactura(idFacturaSeleccionada); // Cargar detalles de la factura seleccionada
+            }
+        });
 
+        async function cargarProductos() {
+    const response = await fetch('/productos');
+    const productos = await response.json();
+    const select = document.getElementById('producto');
+
+    productos.forEach(producto => {
+        let option = document.createElement('option');
+        option.value = producto.ID_PRODUCTO; // Establece el valor como el ID del producto
+        // Aquí mostramos el ID_PRODUCTO, la descripción y el precio
+        option.text = `ID: ${producto.ID_PRODUCTO} - ${producto.DESCRIPCION} - $${producto.PRECIO_VENTA}`;
+        select.appendChild(option);
+    });
+}
+
+
+        document.getElementById('form-devolucion').addEventListener('submit', async (e) => {
+            e.preventDefault();
             const idFactura = document.getElementById('id-factura').value;
-            const idProducto = document.getElementById('producto').value; // Obtener ID_PRODUCTO
+            const idProducto = document.getElementById('producto').value;
             const cantidadDevuelta = document.getElementById('cantidad-devuelta').value;
-            const tipoDano = document.getElementById('tipo-dano').value; // Obtener tipo de daño
-            const fechaDano = document.getElementById('fecha-dano').value; // Obtener fecha de daño
+            const tipoDano = document.getElementById('tipo-dano').value;
+            const fechaDano = document.getElementById('fecha-dano').value;
 
             try {
                 const response = await fetch('/devolucion', {
@@ -170,9 +239,9 @@
                         idFactura,
                         idProducto,
                         cantidadDevuelta,
-                        razon: tipoDano, // Enviar razón de devolución al servidor
-                        descripcionProducto: 'Descripción del Producto', // Este valor debe obtenerse del producto seleccionado
-                        fechaDano // Enviar fecha de daño al servidor
+                        razon: tipoDano,
+                        descripcionProducto: 'Descripción del Producto', // Obtén este valor de la API si es necesario
+                        fechaDano
                     })
                 });
 
@@ -190,34 +259,33 @@
 
         async function obtenerDevoluciones() {
             try {
-                const response = await fetch('/devoluciones'); // Endpoint para obtener devoluciones
+                const response = await fetch('/devoluciones');
                 const devoluciones = await response.json();
-
-                const tbody = document.getElementById('tabla-devoluciones');
-                tbody.innerHTML = ''; // Limpiar tabla antes de llenarla
+                const tabla = document.getElementById('tabla-devoluciones');
+                tabla.innerHTML = '';
 
                 devoluciones.forEach(devolucion => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                         <td>${devolucion.ID_DEVOLUCION}</td>
                         <td>${devolucion.ID_FACTURA}</td>
                         <td>${devolucion.ID_PRODUCTO}</td>
                         <td>${devolucion.DESCRIPCION_PRODUCTO}</td>
                         <td>${devolucion.CANTIDAD_DEVUELTA}</td>
                         <td>${devolucion.RAZON}</td>
-                        <td>${new Date(devolucion.FECHA_DEVOLUCION).toLocaleDateString()}</td>
+                        <td>${devolucion.FECHA_DEVOLUCION}</td>
                     `;
-                    tbody.appendChild(tr);
+                    tabla.appendChild(row);
                 });
             } catch (error) {
-                console.error('Error al obtener devoluciones:', error);
+                console.error('Error al obtener las devoluciones:', error);
             }
         }
 
-        window.onload = () => {
-            cargarProductos(); // Cargar productos al iniciar
-            obtenerDevoluciones(); // Cargar devoluciones al cargar la página
-        };
+        // Inicializar las funciones al cargar la página
+        cargarFacturas();
+        cargarProductos();
+        obtenerDevoluciones();
     </script>
 </body>
 </html>

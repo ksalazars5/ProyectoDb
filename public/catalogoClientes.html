@@ -143,7 +143,10 @@
     
         <label for="nit">NIT:</label>
         <input type="text" id="nit" name="nit"><br>
-    
+        
+        <label for="fechaRegistro">Fecha de Registro:</label>
+        <input type="date" id="fechaRegistro" name="fechaRegistro" required><br>
+        
         <input type="submit" value="Agregar Cliente">
         
         <!-- Botón de volver -->
@@ -164,6 +167,7 @@
                 <th>Teléfono</th>
                 <th>Dirección</th>
                 <th>NIT</th>
+                <th>Fecha de Registro</th>
             </tr>
         </thead>
         <tbody>
@@ -176,11 +180,16 @@
         document.getElementById('clienteForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevenir el comportamiento por defecto del formulario
 
+            // Asignar la fecha actual al campo oculto de fecha de registro
+            const fechaActual = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+            document.getElementById('fechaRegistro').value = fechaActual;
+
             const cliente = {
                 nombre: document.getElementById('nombre').value,
                 telefono: document.getElementById('telefono').value,
                 direccion: document.getElementById('direccion').value,
-                nit: document.getElementById('nit').value || null // Si NIT está vacío, enviar null
+                nit: document.getElementById('nit').value || null, // Si NIT está vacío, enviar null
+                fechaRegistro: fechaActual // Agregar la fecha de registro
             };
 
             fetch('/agregar-cliente', {
@@ -220,6 +229,7 @@
                             <td>${cliente.TELEFONO}</td>
                             <td>${cliente.DIRECCION}</td>
                             <td>${cliente.NIT}</td>
+                            <td>${cliente.FECHA_REGISTRO}</td> <!-- Agregar columna de fecha de registro -->
                         </tr>`;
                         tableBody.innerHTML += row;
                     });
