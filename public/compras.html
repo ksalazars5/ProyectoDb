@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compras</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .buscador {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .buscador label {
+            flex-basis: 100%;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .buscador input[type="text"], 
+        .buscador input[type="date"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            flex-grow: 1;
+        }
+
+        .buscador button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .buscador button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Modal */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 10px;
+            width: 80%; 
+            max-width: 600px;
+        }
+
+        #form-cliente {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #form-cliente input {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #form-cliente input[readonly] {
+            background-color: #e9ecef;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        td {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        #total-compra {
+            font-weight: bold;
+            font-size: 1.8em;
+            text-align: right;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .form-producto {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-producto label, 
+        .form-producto select, 
+        .form-producto input {
+            flex-grow: 1;
+            min-width: 150px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Compras</h1>
+        <div class="buscador">
+            <label for="producto-compra">Producto:</label>
+            <select id="producto-compra"></select>
+            <input type="number" id="cantidad-compra" placeholder="Cantidad" min="1">
+            <button onclick="agregarProductoCompra()">Agregar Producto</button>
+            <button type="button" onclick="window.location.href='http://localhost:3000/success'">Volver</button>
+        </div>
+
+        <div class="buscador">
+            <label for="proveedor-compra">Proveedor:</label>
+            <select id="proveedor-compra"></select>
+            <label for="fecha-compra">Fecha:</label>
+            <input type="date" id="fecha-compra" required>
+            <label for="observaciones-compra">Observaciones:</label>
+            <input type="text" id="observaciones-compra" placeholder="Observaciones">
+        </div>
+
+        <table id="tabla-productos-compra">
+            <thead>
+                <tr>
+                    <th>ID Producto</th>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Costo</th>
+                    <th>Subtotal</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        
+        <div id="total-compra">Total: $<span id="total-compra-compra">0.00</span></div>
+        <button onclick="guardarDetallesCompra()">Finalizar Compra</button>
+    </div>
+
+<script>
+    let carritoCompra = [];
+    let productosCompra = [];
+    let proveedoresCompra = [];
+
+    async function cargarProductosCompra() {
+        const response = await fetch('/productos');
+        productosCompra = await response.json();
+        const select = document.getElementById('producto-compra');
+        select.innerHTML = '<option value="">Seleccione un producto</option>';
+
+        productosCompra.forEach(producto => {
+            let option = document.createElement('option');
+            option.value = producto.ID_PRODUCTO;
+            option.text = `${producto.DESCRIPCION} - $${producto.COSTO}`;
+            select.appendChild(option);
+        });
+    }
+
+    async function cargarProveedoresCompra() {
+        const response = await fetch('/proveedores');
+        proveedoresCompra = await response.json();
+        const select = document.getElementById('proveedor-compra');
+        select.innerHTML = '<option value="">Seleccione un proveedor</option>';
+
+        proveedoresCompra.forEach(proveedor => {
+            let option = document.createElement('option');
+            option.value = proveedor.ID_PROVEEDOR;
+            option.text = proveedor.DESCRIPCION;
+            select.appendChild(option);
+        });
+    }
+
+    function agregarProductoCompra() {
+        const productoId = parseInt(document.getElementById('producto-compra').value);
+        const cantidad = parseInt(document.getElementById('cantidad-compra').value);
+        const producto = productosCompra.find(p => p.ID_PRODUCTO === productoId);
+
+        if (producto && cantidad > 0) {
+            const subtotal = producto.COSTO * cantidad;
+            carritoCompra.push({ ...producto, cantidad, subtotal });
+            actualizarTablaCompra();
+            calcularTotalCompra();
+        } else {
+            alert('Por favor seleccione un producto y cantidad válida.');
+        }
+    }
+
+    function actualizarTablaCompra() {
+        const tbody = document.getElementById('tabla-productos-compra').getElementsByTagName('tbody')[0];
+        tbody.innerHTML = '';
+
+        carritoCompra.forEach((item, index) => {
+            const row = tbody.insertRow();
+            row.insertCell(0).innerText = item.ID_PRODUCTO;
+            row.insertCell(1).innerText = item.DESCRIPCION;
+            row.insertCell(2).innerText = item.cantidad;
+            row.insertCell(3).innerText = item.COSTO.toFixed(2);
+            row.insertCell(4).innerText = item.subtotal.toFixed(2);
+            const actionCell = row.insertCell(5);
+            const button = document.createElement('button');
+            button.innerText = 'Eliminar';
+            button.onclick = () => eliminarProductoCompra(index);
+            actionCell.appendChild(button);
+        });
+    }
+
+    function eliminarProductoCompra(index) {
+        carritoCompra.splice(index, 1);
+        actualizarTablaCompra();
+        calcularTotalCompra();
+    }
+
+    function calcularTotalCompra() {
+        const total = carritoCompra.reduce((sum, item) => sum + item.subtotal, 0);
+        document.getElementById('total-compra-compra').innerText = total.toFixed(2);
+    }
+
+    async function guardarDetallesCompra() {
+    const proveedorId = document.getElementById('proveedor-compra').value;
+    const fecha = document.getElementById('fecha-compra').value;
+    const observaciones = document.getElementById('observaciones-compra').value;
+
+    const detallesCompra = {
+        Idproveedor: proveedorId, // Asegúrate de que el nombre coincida con el que espera el servidor
+        fecha,
+        observaciones,
+        productos: carritoCompra
+    };
+
+    console.log('Detalles de la compra:', detallesCompra); // Imprimir detalles para depuración
+
+    const response = await fetch('/compras', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(detallesCompra)
+    });
+
+    if (response.ok) {
+        alert('Compra registrada exitosamente');
+        // Restablecer el carrito y actualizar la interfaz...
+    } else {
+        const errorText = await response.text();
+        alert('Error al registrar la compra: ' + errorText);
+    }
+}
+    cargarProductosCompra();
+    cargarProveedoresCompra();
+</script>
+</body>
+</html>

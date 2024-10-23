@@ -202,23 +202,48 @@ app.get('/success', (req, res) => {
 app.get('/factura', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'factura.html'));
 });
+
 // Ruta para guardar la compra y los productos
 app.post('/compras', async (req, res) => {
-    const { cliente, productos, total } = req.body;
+    const { Idproveedor, fecha, observaciones, productos } = req.body;
+
+    // Verifica si los datos necesarios están presentes
+    if (!Idproveedor || !productos || !Array.isArray(productos) || productos.length === 0) {
+        return res.status(400).send('Faltan datos necesarios o productos inválidos');
+    }
+
+    // Imprimir datos de entrada para depuración
+    console.log('Datos de la compra:', { Idproveedor, fecha, observaciones, productos });
 
     try {
-        const pool = await sql.connect(config);
-        
+        const pool = await sql.connect(config); // Asegúrate de conectar al pool antes de hacer las consultas
+
+        // Calcular el total de la compra
+        const total = productos.reduce((sum, producto) => {
+            return sum + (producto.cantidad * producto.PRECIO_VENTA);
+        }, 0);
+        console.log('Total de la compra:', total); // Imprimir total para verificar
+
         // Insertar compra
         const resultCompra = await pool.request()
-        .input('ID_CLIENTE', sql.Int, cliente.ID_CLIENTE)
-        .input('TOTAL', sql.Decimal(10, 2), total)
-        .query('INSERT INTO COMPRA (ID_CLIENTE, TOTAL) OUTPUT INSERTED.ID_COMPRA VALUES (@ID_CLIENTE, @TOTAL)');
+            .input('ID_PROVEEDOR', sql.Int, Idproveedor)
+            .input('FECHA_COMPRA', sql.DateTime, new Date(fecha))
+            .input('OBSERVACIONES', sql.VarChar(255), observaciones)
+            .input('TOTAL', sql.Decimal(10, 2), total)
+            .query('INSERT INTO COMPRA (ID_PROVEEDOR, FECHA_COMPRA, TOTAL, OBSERVACIONES) OUTPUT INSERTED.ID_COMPRA VALUES (@ID_PROVEEDOR, @FECHA_COMPRA, @TOTAL, @OBSERVACIONES)');
 
         const idCompra = resultCompra.recordset[0].ID_COMPRA;
-        
+        console.log('ID de compra registrada:', idCompra); // Imprimir ID de compra
+
         // Insertar productos de la compra
         for (const producto of productos) {
+            // Verifica que cada producto tenga los datos necesarios
+            if (!producto.ID_PRODUCTO || !producto.cantidad || !producto.PRECIO_VENTA) {
+                return res.status(400).send('Faltan datos de producto necesarios');
+            }
+
+            console.log('Insertando producto:', producto); // Imprimir producto a insertar
+
             await pool.request()
                 .input('ID_COMPRA', sql.Int, idCompra)
                 .input('ID_PRODUCTO', sql.Int, producto.ID_PRODUCTO)
@@ -226,15 +251,18 @@ app.post('/compras', async (req, res) => {
                 .input('PRECIO_UNITARIO', sql.Decimal(10, 2), producto.PRECIO_VENTA)
                 .query('INSERT INTO DETALLE_COMPRA (ID_COMPRA, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VALUES (@ID_COMPRA, @ID_PRODUCTO, @CANTIDAD, @PRECIO_UNITARIO)');
         }
-
-        res.status(200).send('Compra registrada con éxito');
+        
+        res.status(201).send('Compra registrada exitosamente');
     } catch (error) {
-        console.error('Error al registrar la compra:', error);
+        console.error('Error al registrar la compra:', error); // Imprimir error para depuración
         res.status(500).send(`Error al registrar la compra: ${error.message}`);
-
+    } finally {
+        sql.close(); // Asegúrate de cerrar la conexión
     }
 });
-//Buscar clientes por nit
+
+
+// Buscar clientes por NIT
 app.get('/buscar-sugerencias-clientes', async (req, res) => {
     const { nit } = req.query;
     if (!nit) {
@@ -250,9 +278,11 @@ app.get('/buscar-sugerencias-clientes', async (req, res) => {
         console.error('Error al buscar sugerencias de clientes:', error);
         res.status(500).json({ error: 'Error al buscar sugerencias de clientes.' });
     } finally {
-        sql.close();
+        // Asegúrate de cerrar la conexión al pool
+        await sql.close();
     }
 });
+
 
     
 // Iniciar servidor
